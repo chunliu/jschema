@@ -11,6 +11,7 @@ namespace Microsoft.Json.Schema
     public class JsonSchema : IEquatable<JsonSchema>
     {
         public static readonly Uri V4Draft = new Uri("http://json-schema.org/draft-04/schema#");
+        private static readonly Dictionary<Uri, JsonSchema> _externalSchemas = new();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="JsonSchema"/> class.
@@ -337,6 +338,11 @@ namespace Microsoft.Json.Schema
         public Dictionary<string, JsonSchema> Definitions { get; set; }
 
         /// <summary>
+        /// Specifically for ARM resource schemas.
+        /// </summary>
+        public Dictionary<string, JsonSchema> ResourceDefinitions { get; set; }
+
+        /// <summary>
         /// Gets or sets the minimum valid number of elements in an array.
         /// </summary>
         /// <remarks>
@@ -518,52 +524,78 @@ namespace Microsoft.Json.Schema
 
             if (schema.Reference != null)
             {
+                JsonSchema referencedSchema = null;
+
                 if (!schema.Reference.IsFragment)
                 {
-                    throw Error.CreateException(
-                        Resources.ErrorOnlyDefinitionFragmentsSupported,
-                        schema.Reference);
+                    //throw Error.CreateException(
+                    //    Resources.ErrorOnlyDefinitionFragmentsSupported,
+                    //    schema.Reference);
+                    var schemaFileName = schema.Reference.Uri.Segments[^1];
+                    var isDefinition = schema.Reference.Uri.Fragment.StartsWith("#/definitions");
+                    if (isDefinition)
+                    {
+                        var definitionName = new UriOrFragment(schema.Reference.Uri.Fragment).GetDefinitionName();
+
+                        if (!_externalSchemas.TryGetValue(schema.Reference.Uri, out JsonSchema schemaFromUri))
+                        {
+                            schemaFromUri = SchemaReader.ReadSchema(schema.Reference.Uri, schemaFileName).Result;
+                            _externalSchemas.Add(schema.Reference.Uri, schemaFromUri);
+                        }
+
+                        if (schemaFromUri.Definitions?.TryGetValue(definitionName, out referencedSchema) != true)
+                        {
+                            throw Error.CreateException(
+                                    Resources.ErrorDefinitionDoesNotExist,
+                                    schema.Reference.Uri.Fragment);
+                        }
+                    }
                 }
-
-                string definitionName = schema.Reference.GetDefinitionName();
-
-                if (rootSchema.Definitions == null || !rootSchema.Definitions.TryGetValue(definitionName, out JsonSchema referencedSchema))
+                else
                 {
-                    throw Error.CreateException(
-                        Resources.ErrorDefinitionDoesNotExist,
-                        definitionName);
+                    string definitionName = schema.Reference.GetDefinitionName();
+
+                    if (rootSchema.Definitions == null || !rootSchema.Definitions.TryGetValue(definitionName, out referencedSchema))
+                    {
+                        throw Error.CreateException(
+                            Resources.ErrorDefinitionDoesNotExist,
+                            definitionName);
+                    }
                 }
 
-                if (referencedSchema.Type != null)
+                if (referencedSchema != null)
                 {
-                    collapsedSchema.Type = new List<SchemaType>(referencedSchema.Type);
-                }
+                    if (referencedSchema.Type != null)
+                    {
+                        collapsedSchema.Type = new List<SchemaType>(referencedSchema.Type);
+                    }
 
-                if (referencedSchema.Enum != null)
-                {
-                    collapsedSchema.Enum = new List<object>(referencedSchema.Enum);
-                }
+                    if (referencedSchema.Enum != null)
+                    {
+                        collapsedSchema.Enum = new List<object>(referencedSchema.Enum);
+                    }
 
-                if (referencedSchema.Items != null)
-                {
-                    collapsedSchema.Items = new Items(
-                        new List<JsonSchema>(
-                            referencedSchema.Items.Schemas.Select(
-                                itemSchema => Collapse(itemSchema, rootSchema))));
-                    collapsedSchema.Items.SingleSchema = referencedSchema.Items.SingleSchema;
-                }
+                    if (referencedSchema.Items != null)
+                    {
+                        collapsedSchema.Items = new Items(
+                            new List<JsonSchema>(
+                                referencedSchema.Items.Schemas.Select(
+                                    itemSchema => Collapse(itemSchema, rootSchema))));
+                        collapsedSchema.Items.SingleSchema = referencedSchema.Items.SingleSchema;
+                    }
 
-                collapsedSchema.Default = referencedSchema.Default;
-                collapsedSchema.Pattern = referencedSchema.Pattern;
-                collapsedSchema.MaxLength = referencedSchema.MaxLength;
-                collapsedSchema.MinLength = referencedSchema.MinLength;
-                collapsedSchema.MultipleOf = referencedSchema.MultipleOf;
-                collapsedSchema.Maximum = referencedSchema.Maximum;
-                collapsedSchema.ExclusiveMaximum = referencedSchema.ExclusiveMaximum;
-                collapsedSchema.MinItems = referencedSchema.MinItems;
-                collapsedSchema.MaxItems = referencedSchema.MaxItems;
-                collapsedSchema.UniqueItems = referencedSchema.UniqueItems;
-                collapsedSchema.Format = referencedSchema.Format;
+                    collapsedSchema.Default = referencedSchema.Default;
+                    collapsedSchema.Pattern = referencedSchema.Pattern;
+                    collapsedSchema.MaxLength = referencedSchema.MaxLength;
+                    collapsedSchema.MinLength = referencedSchema.MinLength;
+                    collapsedSchema.MultipleOf = referencedSchema.MultipleOf;
+                    collapsedSchema.Maximum = referencedSchema.Maximum;
+                    collapsedSchema.ExclusiveMaximum = referencedSchema.ExclusiveMaximum;
+                    collapsedSchema.MinItems = referencedSchema.MinItems;
+                    collapsedSchema.MaxItems = referencedSchema.MaxItems;
+                    collapsedSchema.UniqueItems = referencedSchema.UniqueItems;
+                    collapsedSchema.Format = referencedSchema.Format;
+                }
             }
 
             return collapsedSchema;

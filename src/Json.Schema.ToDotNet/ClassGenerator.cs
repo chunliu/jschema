@@ -114,6 +114,13 @@ namespace Microsoft.Json.Schema.ToDotNet
                             SyntaxFactory.ParseTypeName(btn))));
             }
 
+            // Infer the base type based on the schema
+            var inferredBaseType = InferBaseTypeFromSchema();
+            if (inferredBaseType != null)
+            {
+                baseTypes.Add(inferredBaseType);
+            }
+
             // If this class implements an interface, add the interface to
             // the base type list.
             if (_baseInterfaceName != null)
@@ -146,6 +153,25 @@ namespace Microsoft.Json.Schema.ToDotNet
             }
 
             return classDeclaration;
+        }
+
+        private BaseTypeSyntax InferBaseTypeFromSchema()
+        {
+            SchemaType schemaType = Schema.SafeGetType();
+
+            if (schemaType == SchemaType.None && Schema.AllOf?.Count > 0)
+            {
+                foreach (var schema in Schema.AllOf)
+                {
+                    if (schema.Reference?.IsFragment ?? false)
+                    {
+                        var baseTypeName = schema.Reference.GetDefinitionName();
+                        return SyntaxFactory.SimpleBaseType(SyntaxFactory.ParseTypeName(baseTypeName));
+                    }
+                }
+            }
+
+            return null;
         }
 
         public override void AddMembers()

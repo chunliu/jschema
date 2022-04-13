@@ -304,7 +304,7 @@ namespace Microsoft.Json.Schema.ToDotNet
                         // the generated Init method will initialize it by cloning an object
                         // of that type. Otherwise, we treat this property as a System.Object
                         // and just initialize it by assignment.
-                        if (propertySchema.Reference != null)
+                        if (propertySchema.Reference != null || propertySchema.AdditionalProperties?.Schema?.Reference != null)
                         {
                             comparisonKind = ComparisonKind.EqualityComparerEquals;
                             initializationKind = InitializationKind.Clone;
@@ -397,6 +397,10 @@ namespace Microsoft.Json.Schema.ToDotNet
             if (schema.Reference != null)
             {
                 return MakeObjectTypeFromReference(schema.Reference, out namespaceName);
+            }
+            else if (schema.AdditionalProperties?.Schema?.Reference != null)
+            {
+                return MakeObjectTypeFromReference(schema.AdditionalProperties.Schema.Reference, out namespaceName);
             }
             else
             {

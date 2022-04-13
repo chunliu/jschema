@@ -84,10 +84,24 @@ namespace Microsoft.Json.Schema
     public static class UriOrFragmentExtensions
     {
         private static readonly Regex s_definitionRegex = new Regex(@"^#/definitions/(?<definitionName>[^/]+)$");
+        private static readonly Regex s_resDefinitionRegex = new Regex(@"^#/resourceDefinitions/(?<definitionName>[^/]+)$");
 
         public static string GetDefinitionName(this UriOrFragment reference)
         {
             Match match = s_definitionRegex.Match(reference.Fragment);
+            if (!match.Success)
+            {
+                throw Error.CreateException(
+                    Resources.ErrorOnlyDefinitionFragmentsSupported,
+                    reference.Fragment);
+            }
+
+            return match.Groups["definitionName"].Captures[0].Value;
+        }
+
+        public static string GetResourceDefinitionName(this UriOrFragment reference)
+        {
+            Match match = s_resDefinitionRegex.Match(reference.Fragment);
             if (!match.Success)
             {
                 throw Error.CreateException(
