@@ -43,7 +43,8 @@ namespace Microsoft.Json.Schema.ToDotNet.Hints
                     [HintKind.EnumHint] = CreateEnumHint,
                     [HintKind.InterfaceHint] = CreateInterfaceHint,
                     [HintKind.PropertyModifiersHint] = CreatePropertyModifiersHint,
-                    [HintKind.PropertyNameHint] = CreatePropertyNameHint
+                    [HintKind.PropertyNameHint] = CreatePropertyNameHint,
+                    [HintKind.ReferenceTypeHint] = CreateReferenceTypeHint,
                 });
 
         var infoDictionary = HintInstantiationInfoDictionary.Deserialize(dictionaryText);
@@ -158,6 +159,13 @@ namespace Microsoft.Json.Schema.ToDotNet.Hints
             string className = GetArgument<string>(arguments, nameof(ClassNameHint.ClassName));
 
             return new ClassNameHint(className);
+        }
+
+        private static CodeGenHint CreateReferenceTypeHint(JObject arguments)
+        {
+            string referenceTypeName = GetArgument<string>(arguments, nameof(ReferenceTypeHint.TypeName));
+
+            return new ReferenceTypeHint(referenceTypeName);
         }
 
         private static CodeGenHint CreateDictionaryHint(JObject arguments)

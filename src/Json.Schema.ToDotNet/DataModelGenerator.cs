@@ -129,7 +129,9 @@ namespace Microsoft.Json.Schema.ToDotNet
 
         private bool ShouldGenerateType(KeyValuePair<string, JsonSchema> definition)
         {
-            return definition.Value.SafeGetType() != SchemaType.Array;
+            var sType = definition.Value.SafeGetType();
+            return !_settings.ExcludedDefinitionNames.Contains(definition.Key)
+                && (sType == SchemaType.Object || sType == SchemaType.None);
         }
 
         private void GenerateClassesForDefinitions(IEnumerable<KeyValuePair<string, JsonSchema>> definitions)

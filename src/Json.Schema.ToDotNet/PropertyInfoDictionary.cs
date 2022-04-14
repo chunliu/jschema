@@ -196,6 +196,28 @@ namespace Microsoft.Json.Schema.ToDotNet
         {
             var entries = new List<KeyValuePair<string, PropertyInfo>>();
 
+            // Handle AllOf
+            if (_schema.AllOf?.Count > 0)
+            {
+                foreach (var s in _schema.AllOf)
+                {
+                    if (s.Properties?.Count > 0)
+                    {
+                        if (_schema.Properties == null)
+                        {
+                            _schema.Properties = s.Properties;
+                        }
+                        else
+                        {
+                            foreach (KeyValuePair<string, JsonSchema> p in s.Properties)
+                            {
+                                _schema.Properties.Add(p.Key, p.Value);
+                            }
+                        }
+                    }
+                }
+            }
+
             if (_schema.Properties != null)
             {
                 foreach (KeyValuePair<string, JsonSchema> schemaProperty in _schema.Properties)
@@ -280,6 +302,14 @@ namespace Microsoft.Json.Schema.ToDotNet
             else
             {
                 SchemaType propertyType = propertySchema.SafeGetType();
+                
+                if (propertyType == SchemaType.None && propertySchema.Type == null && propertySchema.Reference != null)
+                {
+                    // Handle resourceLocations which is actually a string
+                    ReferenceTypeHint rHint = _hintDictionary.GetHint<ReferenceTypeHint>(schemaPropertyName);
+                    var typeName = rHint?.TypeName?[..1].ToUpperInvariant() + rHint?.TypeName?[1..] ?? string.Empty;
+                    _ = Enum.TryParse(typeName, out propertyType);
+                }
 
                 switch (propertyType)
                 {
@@ -433,6 +463,26 @@ namespace Microsoft.Json.Schema.ToDotNet
             JsonSchema schema)
         {
             string key = MakeElementKeyName(propertyName);
+            if (schema.Items == null)
+            {
+                // The reference schema could be an array
+                if (schema.OneOf?.Count > 0)
+                {
+                    foreach(var s in schema.OneOf)
+                    {
+                        if (s.Type?.Count > 0 && s.Type[0] == SchemaType.Array && s.Items != null)
+                        {
+                            if (s.Items.Schema.Type == null && s.Items.Schema?.Reference != null)
+                            {
+                                s.Items.Schema.Type = new List<SchemaType> { SchemaType.Object };
+                            }
+                            schema = s;
+                            break;
+                        }
+                    }
+                }
+            }
+            
             if (schema.Items == null)
             {
                 // If "items" is missing, it defaults to an empty schema, meaning the array

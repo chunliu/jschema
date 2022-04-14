@@ -121,30 +121,66 @@ namespace Microsoft.Json.Schema
 
             if (TryGetTypeFromOneOf(schema.OneOf, out SchemaType typeFromOneOf)) { return typeFromOneOf;  }
 
+            if (TryGetTypeFromAnyOf(schema.AnyOf, out SchemaType typeFromAnyof)) { return typeFromAnyof; }
+
             return SchemaType.None;
         }
 
-        // Support a very limited usage of JSON Schema's "oneOf" validation keyword.
-        // The reason for this support, and a disclaimer about its limitations, are
-        // given in https://github.com/Microsoft/jschema/issues/79.
+        // Handle OneOf
         private static bool TryGetTypeFromOneOf(IList<JsonSchema> oneOf, out SchemaType result)
         {
             result = SchemaType.None;
 
-            if (oneOf == null || oneOf.Count != 2) { return false; }
+            if (oneOf == null) { return false; }
 
-            SchemaType firstType = SchemaType.None;
-            if (oneOf[0].Type?.Count > 0) { firstType = oneOf[0].Type[0]; }
-
-            SchemaType secondType = SchemaType.None;
-            if (oneOf[1].Type?.Count > 0) { secondType = oneOf[1].Type[0]; }
-
-            if ((firstType == SchemaType.Array && secondType == SchemaType.Null) ||
-                (firstType == SchemaType.Null  && secondType == SchemaType.Array))
+            foreach(var o in oneOf)
             {
-                result = SchemaType.Array;
-                return true;
+                if (o.Type?.Count > 0)
+                {
+                    if (o.Type[0] == SchemaType.Array)
+                    {
+                        result = SchemaType.Array;
+                        return true;
+                    }
+
+                    if (o.Type[0] > result)
+                    {
+                        result = o.Type[0];
+                    }
+                }
             }
+
+            if (result != SchemaType.None)
+                return true;
+
+            return false;
+        }
+
+        private static bool TryGetTypeFromAnyOf(IList<JsonSchema> anyOf, out SchemaType result)
+        {
+            result = SchemaType.None;
+
+            if (anyOf == null) { return false; }
+
+            foreach (var a in anyOf)
+            {
+                if (a.Type?.Count > 0)
+                {
+                    if (a.Type[0] == SchemaType.Array)
+                    {
+                        result = SchemaType.Array;
+                        return true;
+                    }
+
+                    if (a.Type[0] > result)
+                    {
+                        result = a.Type[0];
+                    }
+                }
+            }
+
+            if (result != SchemaType.None)
+                return true;
 
             return false;
         }

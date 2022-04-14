@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation.  All Rights Reserved.
 // Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
+using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using Microsoft.Json.Schema.ToDotNet.Hints;
@@ -94,6 +95,8 @@ namespace Microsoft.Json.Schema.ToDotNet
         /// classes should be declared <code>protected</code>.
         /// </summary>
         public bool ProtectedInitMethods { get; set; }
+
+        public IList<string> ExcludedDefinitionNames { get; set; }
 
         internal void Validate()
         {
