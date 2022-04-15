@@ -42,6 +42,12 @@ namespace Microsoft.Json.Schema.ToDotNet
                 return false;
             }
 
+            if (schema.AdditionalProperties?.Schema != null)
+            {
+                dictionaryHint = hintDictionary?.GetPropertyHint<DictionaryHint>(typeName, propertyName);
+                return true;
+            }
+
             // Is there a DictionaryHint that targets this property?
             if (hintDictionary == null)
             {
