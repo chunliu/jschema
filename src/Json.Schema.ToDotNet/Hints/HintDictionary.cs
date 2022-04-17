@@ -204,8 +204,9 @@ namespace Microsoft.Json.Schema.ToDotNet.Hints
         private static CodeGenHint CreatePropertyModifiersHint(JObject arguments)
         {
             string[] modifiers = GetArrayArgument<string>(arguments, nameof(PropertyModifiersHint.Modifiers));
+            bool onlyGet = GetArgument<bool>(arguments, nameof(PropertyModifiersHint.OnlyGet));
 
-            return new PropertyModifiersHint(modifiers);
+            return new PropertyModifiersHint(modifiers, onlyGet);
         }
 
         private static CodeGenHint CreatePropertyNameHint(JObject arguments)

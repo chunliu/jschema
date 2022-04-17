@@ -442,8 +442,17 @@ namespace Microsoft.Json.Schema.ToDotNet
             return modifierTokens.ToArray();
         }
 
-        protected override AccessorDeclarationSyntax[] GeneratePropertyAccessors()
+        protected override AccessorDeclarationSyntax[] GeneratePropertyAccessors(string propertyName)
         {
+            PropertyModifiersHint propertyModifiersHint = HintDictionary?.GetPropertyHint<PropertyModifiersHint>(TypeName, propertyName);
+            if (propertyModifiersHint?.OnlyGet ?? false)
+            {
+                return new AccessorDeclarationSyntax[]
+                {
+                    SyntaxHelper.MakeGetAccessor()
+                };
+            }
+
             return new AccessorDeclarationSyntax[]
                 {
                     SyntaxHelper.MakeGetAccessor(),

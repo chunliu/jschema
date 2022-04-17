@@ -199,20 +199,17 @@ namespace Microsoft.Json.Schema.ToDotNet
             // Handle AllOf
             if (_schema.AllOf?.Count > 0)
             {
-                foreach (var s in _schema.AllOf)
+                foreach (var schema in _schema.AllOf.Where(s => s.Properties?.Count > 0))
                 {
-                    if (s.Properties?.Count > 0)
+                    if (_schema.Properties == null)
                     {
-                        if (_schema.Properties == null)
+                        _schema.Properties = schema.Properties;
+                    }
+                    else
+                    {
+                        foreach (KeyValuePair<string, JsonSchema> p in schema.Properties)
                         {
-                            _schema.Properties = s.Properties;
-                        }
-                        else
-                        {
-                            foreach (KeyValuePair<string, JsonSchema> p in s.Properties)
-                            {
-                                _schema.Properties.Add(p.Key, p.Value);
-                            }
+                            _schema.Properties.Add(p.Key, p.Value);
                         }
                     }
                 }
@@ -462,15 +459,15 @@ namespace Microsoft.Json.Schema.ToDotNet
                 // The reference schema could be an array
                 if (schema.OneOf?.Count > 0)
                 {
-                    foreach(var s in schema.OneOf)
+                    foreach(var oneOf in schema.OneOf.Where(o => o.Type?.Count > 0))
                     {
-                        if (s.Type?.Count > 0 && s.Type[0] == SchemaType.Array && s.Items != null)
+                        if (oneOf.Type[0] == SchemaType.Array && oneOf.Items != null)
                         {
-                            if (s.Items.Schema.Type == null && s.Items.Schema?.Reference != null)
+                            if (oneOf.Items.Schema.Type == null && oneOf.Items.Schema.Reference != null)
                             {
-                                s.Items.Schema.Type = new List<SchemaType> { SchemaType.Object };
+                                oneOf.Items.Schema.Type = new List<SchemaType> { SchemaType.Object };
                             }
-                            schema = s;
+                            schema = oneOf;
                             break;
                         }
                     }

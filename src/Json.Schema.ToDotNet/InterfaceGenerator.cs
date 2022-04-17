@@ -60,7 +60,7 @@ namespace Microsoft.Json.Schema.ToDotNet
             return new SyntaxToken[0];
         }
 
-        protected override AccessorDeclarationSyntax[] GeneratePropertyAccessors()
+        protected override AccessorDeclarationSyntax[] GeneratePropertyAccessors(string propertyName)
         {
             return new AccessorDeclarationSyntax[]
                 {

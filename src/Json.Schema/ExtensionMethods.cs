@@ -133,20 +133,17 @@ namespace Microsoft.Json.Schema
 
             if (oneOf == null) { return false; }
 
-            foreach(var o in oneOf)
+            foreach(var of in oneOf.Where(o => o.Type?.Count > 0))
             {
-                if (o.Type?.Count > 0)
+                if (of.Type[0] == SchemaType.Array)
                 {
-                    if (o.Type[0] == SchemaType.Array)
-                    {
-                        result = SchemaType.Array;
-                        return true;
-                    }
+                    result = SchemaType.Array;
+                    return true;
+                }
 
-                    if (o.Type[0] > result)
-                    {
-                        result = o.Type[0];
-                    }
+                if (of.Type[0] > result)
+                {
+                    result = of.Type[0];
                 }
             }
 

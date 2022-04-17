@@ -23,45 +23,28 @@ namespace Microsoft.Json.Schema.ToDotNet.Hints
         /// <param name="modifiers">
         /// The property modifiers.
         /// </param>
-        public PropertyModifiersHint(IEnumerable<string> modifiers)
+        public PropertyModifiersHint(IEnumerable<string> modifiers, bool onlyGet)
         {
             Modifiers = modifiers.Select(TokenFromModifierName).ToList();
+            OnlyGet = onlyGet;
         }
 
         private SyntaxToken TokenFromModifierName(string modifierName)
         {
-            SyntaxKind kind;
-
-            switch (modifierName)
+            var kind = modifierName switch
             {
-                case "public":
-                    kind = SyntaxKind.PublicKeyword;
-                    break;
-
-                case "internal":
-                    kind = SyntaxKind.InternalKeyword;
-                    break;
-
-                case "protected":
-                    kind = SyntaxKind.PrivateKeyword;
-                    break;
-
-                case "private":
-                    kind = SyntaxKind.PrivateKeyword;
-                    break;
-
-                case "override":
-                    kind = SyntaxKind.OverrideKeyword;
-                    break;
-
-                default:
-                    throw new ArgumentException(
+                "public" => SyntaxKind.PublicKeyword,
+                "internal" => SyntaxKind.InternalKeyword,
+                "protected" => SyntaxKind.PrivateKeyword,
+                "private" => SyntaxKind.PrivateKeyword,
+                "override" => SyntaxKind.OverrideKeyword,
+                "virtual" => SyntaxKind.VirtualKeyword,
+                _ => throw new ArgumentException(
                         string.Format(
-                            CultureInfo.CurrentCulture,
-                            Resources.ErrorInvalidModifier,
-                            modifierName));
-            }
-
+                        CultureInfo.CurrentCulture,
+                        Resources.ErrorInvalidModifier,
+                        modifierName)),
+            };
             return SyntaxFactory.Token(kind);
         }
 
@@ -69,5 +52,6 @@ namespace Microsoft.Json.Schema.ToDotNet.Hints
         /// Gets the property modifiers.
         /// </summary>
         public IList<SyntaxToken> Modifiers { get; }
+        public bool OnlyGet { get; }
     }
 }

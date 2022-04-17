@@ -38,7 +38,7 @@ namespace Microsoft.Json.Schema.ToDotNet
         /// </returns>
         protected abstract SyntaxToken[] GenerateSchemaPropertyModifiers(string propertyName);
 
-        protected abstract AccessorDeclarationSyntax[] GeneratePropertyAccessors();
+        protected abstract AccessorDeclarationSyntax[] GeneratePropertyAccessors(string propertyName);
 
         /// <summary>
         /// Gets a dictionary that maps the name of each property in the generated class
@@ -110,7 +110,7 @@ namespace Microsoft.Json.Schema.ToDotNet
                 info.Type,
                 propertyName.ToPascalCase())
                 .AddModifiers(GenerateSchemaPropertyModifiers(propertyName))
-                .AddAccessorListAccessors(GeneratePropertyAccessors());
+                .AddAccessorListAccessors(GeneratePropertyAccessors(propertyName));
 
             AttributeSyntax[] attributes = GeneratePropertyAttributes(propertyName, info.SerializedName, info.IsRequired, info.DefaultValue, info.Type);
             if (attributes.Length > 0)
