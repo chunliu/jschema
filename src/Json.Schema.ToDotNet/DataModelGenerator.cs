@@ -26,6 +26,7 @@ namespace Microsoft.Json.Schema.ToDotNet
         private string _nodeInterfaceName;
         private List<AdditionalTypeRequiredInfo> _additionalTypesRequiredList;
         private Dictionary<string, PropertyInfoDictionary> _classInfoDictionary;
+        private string _outputDirectory;
 
         public DataModelGenerator(DataModelGeneratorSettings settings)
             : this(settings, new FileSystem())
@@ -39,6 +40,9 @@ namespace Microsoft.Json.Schema.ToDotNet
             _settings.Validate();
 
             _fileSystem = fileSystem;
+            _outputDirectory = string.IsNullOrWhiteSpace(_settings.NamespaceDir)
+                ? _settings.OutputDirectory
+                : Path.Combine(_settings.OutputDirectory, _settings.NamespaceDir);
             _pathToFileContentsDictionary = new Dictionary<string, string>();
 
             _additionalTypesRequiredList = new List<AdditionalTypeRequiredInfo>();
@@ -59,12 +63,12 @@ namespace Microsoft.Json.Schema.ToDotNet
 
             _rootSchema = JsonSchema.Collapse(rootSchema);
 
-            if (_fileSystem.DirectoryExists(_settings.OutputDirectory) && !_settings.ForceOverwrite)
+            if (_fileSystem.DirectoryExists(_outputDirectory) && !_settings.ForceOverwrite)
             {
-                throw Error.CreateException(Resources.ErrorOutputDirectoryExists, _settings.OutputDirectory);
+                throw Error.CreateException(Resources.ErrorOutputDirectoryExists, _outputDirectory);
             }
 
-            _fileSystem.CreateDirectory(_settings.OutputDirectory);
+            _fileSystem.CreateDirectory(_outputDirectory);
 
             SchemaType rootSchemaType = _rootSchema.SafeGetType();
             if (rootSchemaType != SchemaType.Object)
@@ -119,7 +123,7 @@ namespace Microsoft.Json.Schema.ToDotNet
 
             foreach (KeyValuePair<string, string> entry in _pathToFileContentsDictionary)
             {
-                _fileSystem.WriteAllText(Path.Combine(_settings.OutputDirectory, entry.Key + ".cs"), entry.Value);
+                _fileSystem.WriteAllText(Path.Combine(_outputDirectory, entry.Key + ".cs"), entry.Value);
             }
 
             // Returning the text of the file generated from the root schema allows this method

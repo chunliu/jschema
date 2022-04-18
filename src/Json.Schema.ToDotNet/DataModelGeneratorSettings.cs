@@ -18,6 +18,8 @@ namespace Microsoft.Json.Schema.ToDotNet
         /// </summary>
         public string OutputDirectory { get; set; }
 
+        public string NamespaceDir { get; set; }
+
         /// <summary>
         /// Gets or sets a value indicating whether files in the specified output directory
         /// should be overwritten.
@@ -34,11 +36,15 @@ namespace Microsoft.Json.Schema.ToDotNet
         /// </summary>
         public string NamespaceName { get; set; }
 
+        public IList<string> UsingNamespaces { get; set; } 
+
         /// <summary>
         /// Gets the name of the namespace in which the classes will be generated, including
         /// any specified suffix.
         /// </summary>
-        public string SuffixedNamespaceName => Utilities.QualifyNameWithSuffix(NamespaceName, TypeNameSuffix);
+        public string SuffixedNamespaceName => string.IsNullOrWhiteSpace(NamespaceDir)
+            ? Utilities.QualifyNameWithSuffix(NamespaceName, TypeNameSuffix)
+            : Utilities.QualifyNameWithSuffix(NamespaceName, TypeNameSuffix) + "." + NamespaceDir;
 
         /// <summary>
         /// Gets or sets the name of the class at the root of the generated object model
