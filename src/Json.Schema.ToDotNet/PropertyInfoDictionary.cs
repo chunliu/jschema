@@ -245,6 +245,13 @@ namespace Microsoft.Json.Schema.ToDotNet
             bool isOfSchemaDefinedType = false;
             int arrayRank = 0;
 
+            // Exclude properties from base type
+            var baseTypeHint = _hintDictionary.GetHint<BaseTypeHint>(_typeName.ToCamelCase());
+            if (baseTypeHint != null && (baseTypeHint.BaseTypePropsToIgnore?.Contains(schemaPropertyName) ?? false))
+            {
+                return;
+            }
+
             if (propertySchema.IsDateTime())
             {
                 comparisonKind = ComparisonKind.OperatorEquals;
@@ -304,7 +311,8 @@ namespace Microsoft.Json.Schema.ToDotNet
                 {
                     // Handle resourceLocations which is actually a string
                     ReferenceTypeHint rHint = _hintDictionary.GetHint<ReferenceTypeHint>(schemaPropertyName);
-                    var typeName = rHint?.TypeName?[..1].ToUpperInvariant() + rHint?.TypeName?[1..] ?? string.Empty;
+                    // var typeName = rHint?.TypeName?[..1].ToUpperInvariant() + rHint?.TypeName?[1..] ?? string.Empty;
+                    var typeName = rHint?.TypeName?.ToPascalCase() ?? string.Empty;
                     _ = Enum.TryParse(typeName, out propertyType);
                 }
 

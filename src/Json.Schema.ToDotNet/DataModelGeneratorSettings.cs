@@ -103,6 +103,7 @@ namespace Microsoft.Json.Schema.ToDotNet
         public bool ProtectedInitMethods { get; set; }
 
         public IList<string> ExcludedDefinitionNames { get; set; }
+        public IList<string> ExcludedResourceDefinitionNames { get; set; }
 
         internal void Validate()
         {

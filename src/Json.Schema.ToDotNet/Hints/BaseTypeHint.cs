@@ -18,14 +18,21 @@ namespace Microsoft.Json.Schema.ToDotNet.Hints
         /// <param name="baseTypeNames">
         /// The names of the base types.
         /// </param>
-        public BaseTypeHint(IEnumerable<string> baseTypeNames)
+        public BaseTypeHint(IEnumerable<string> baseTypeNames, 
+            IEnumerable<string> baseTypePropsToIgnore, IEnumerable<string> baseTypePropsToOverride)
         {
             BaseTypeNames = baseTypeNames.ToList();
+            BaseTypePropsToIgnore = baseTypePropsToIgnore.ToList();
+            BaseTypePropsToOverride = baseTypePropsToOverride.ToList();
         }
 
         /// <summary>
         /// Gets the names of the base types.
         /// </summary>
         public IList<string> BaseTypeNames { get; }
+
+        public IList<string> BaseTypePropsToIgnore { get; }
+
+        public IList<string> BaseTypePropsToOverride { get; }
     }
 }

@@ -25,6 +25,7 @@ namespace Microsoft.Json.Schema.ToDotNet
         private readonly bool _protectedInitMethods;
         private readonly string _syntaxInterfaceName;
         private readonly string _kindEnumName;
+        private IList<string> _usingNamespaces;
 
         // Name used for the parameters of the copy ctor.
         private const string OtherParameterName = "other";
@@ -70,7 +71,8 @@ namespace Microsoft.Json.Schema.ToDotNet
             bool protectedInitMethods,
             string syntaxInterfaceName,
             string kindEnumName,
-            string typeNameSuffix)
+            string typeNameSuffix,
+            IList<string> usingNamespaces)
             : base(propertyInfoDictionary, schema, typeNameSuffix, hintDictionary)
         {
             _baseInterfaceName = interfaceName;
@@ -81,6 +83,7 @@ namespace Microsoft.Json.Schema.ToDotNet
             _virtualMembers = virtualMembers;
             _protectedInitMethods = protectedInitMethods;
             _kindEnumName = kindEnumName;
+            _usingNamespaces = usingNamespaces;
 
             _localVariableNameGenerator = new LocalVariableNameGenerator();
         }
@@ -144,6 +147,7 @@ namespace Microsoft.Json.Schema.ToDotNet
 
             AddUsing("System");
             AddUsing("System.Runtime.Serialization");   // For DataContractAttribute;
+            _usingNamespaces?.ToList().ForEach(n => AddUsing(n));
 
             if (baseTypes.Count > 0)
             {

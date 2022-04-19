@@ -131,10 +131,57 @@ namespace Microsoft.Json.Schema.ToDotNet
             return rootFileText;
         }
 
+        public void GenerateClassesForResourceDefinitions(JsonSchema schema)
+        {
+            if (_fileSystem.DirectoryExists(_outputDirectory) && !_settings.ForceOverwrite)
+            {
+                throw Error.CreateException(Resources.ErrorOutputDirectoryExists, _outputDirectory);
+            }
+
+            _fileSystem.CreateDirectory(_outputDirectory);
+
+            if (schema.ResourceDefinitions == null)
+            {
+                throw Error.CreateException("No resource definitions in the schema.", schema);
+            }
+
+            List<KeyValuePair<string, JsonSchema>> resourceDefinitions = schema.ResourceDefinitions
+                .Where(ShouldGenerateTypeForResourceDefinition)
+                .ToList();
+            
+            foreach(KeyValuePair<string, JsonSchema> resourceDefinition in resourceDefinitions)
+            {
+                GenerateClassForResourceDefinition(resourceDefinition.Key, resourceDefinition.Value);
+            }
+
+            if (schema.Definitions != null)
+            {
+                List<KeyValuePair<string, JsonSchema>> typeDefinitions = schema.Definitions.Where(ShouldGenerateType).ToList();
+                GenerateClassesForDefinitions(typeDefinitions);
+
+                if (_settings.GenerateEqualityComparers)
+                {
+                    GenerateEqualityComparers(typeDefinitions);
+                }
+            }
+
+            foreach (KeyValuePair<string, string> entry in _pathToFileContentsDictionary)
+            {
+                _fileSystem.WriteAllText(Path.Combine(_outputDirectory, entry.Key + ".cs"), entry.Value);
+            }
+        }
+
+        private bool ShouldGenerateTypeForResourceDefinition(KeyValuePair<string, JsonSchema> resourceDefinition)
+        {
+            var sType = resourceDefinition.Value.SafeGetType();
+            return (!_settings.ExcludedResourceDefinitionNames?.Contains(resourceDefinition.Key) ?? true)
+                && (sType == SchemaType.Object || sType == SchemaType.None);
+        }
+
         private bool ShouldGenerateType(KeyValuePair<string, JsonSchema> definition)
         {
             var sType = definition.Value.SafeGetType();
-            return !_settings.ExcludedDefinitionNames.Contains(definition.Key)
+            return (!_settings.ExcludedDefinitionNames?.Contains(definition.Key) ?? true)
                 && (sType == SchemaType.Object || sType == SchemaType.None);
         }
 
@@ -300,7 +347,8 @@ namespace Microsoft.Json.Schema.ToDotNet
                     _settings.ProtectedInitMethods,
                     _nodeInterfaceName,
                     _kindEnumName,
-                    _settings.TypeNameSuffix);
+                    _settings.TypeNameSuffix,
+                    _settings.UsingNamespaces);
 
                 if (_settings.GenerateCloningCode)
                 {
@@ -337,6 +385,115 @@ namespace Microsoft.Json.Schema.ToDotNet
             }
 
             return _pathToFileContentsDictionary[suffixedClassName];
+        }
+
+        internal string GenerateClassForResourceDefinition(string className, JsonSchema schema)
+        {
+            // Add code gen hint for the resource definition
+            AddCodeHintForResourceDefinition(className);
+
+            className = GetHintedClassName(className).ToPascalCase();
+            string suffixedClassName = className + _settings.TypeNameSuffix;
+
+            var propertyInfoDictionary = new PropertyInfoDictionary(
+                className,
+                _settings.TypeNameSuffix,
+                schema,
+                _settings.HintDictionary,
+                OnAdditionalTypeRequired);
+
+            _classInfoDictionary.Add(suffixedClassName, propertyInfoDictionary);
+
+            EnumHint enumHint = null;
+            InterfaceHint interfaceHint = null;
+            if (_settings.HintDictionary != null)
+            {
+                string key = className.ToCamelCase();
+                enumHint = _settings.HintDictionary.GetHint<EnumHint>(key);
+                interfaceHint = _settings.HintDictionary.GetHint<InterfaceHint>(key);
+            }
+
+            string baseInterfaceName = null;
+            if (interfaceHint != null)
+            {
+                baseInterfaceName = "I" + suffixedClassName;
+            }
+
+            TypeGenerator typeGenerator;
+            if (enumHint == null)
+            {
+                typeGenerator = new ClassGenerator(
+                    propertyInfoDictionary,
+                    schema,
+                    _settings.HintDictionary,
+                    baseInterfaceName,
+                    _settings.GenerateEqualityComparers,
+                    _settings.GenerateCloningCode,
+                    _settings.SealClasses,
+                    _settings.VirtualMembers,
+                    _settings.ProtectedInitMethods,
+                    _nodeInterfaceName,
+                    _kindEnumName,
+                    _settings.TypeNameSuffix,
+                    _settings.UsingNamespaces);
+
+                if (_settings.GenerateCloningCode)
+                {
+                    // The cloning code includes an enumeration with one member for each
+                    // generated class, so keep track of the class names.
+                    _generatedClassNames.Add(suffixedClassName);
+                }
+            }
+            else
+            {
+                typeGenerator = new EnumGenerator(schema, _settings.TypeNameSuffix, _settings.HintDictionary);
+            }
+
+            _pathToFileContentsDictionary[suffixedClassName] = typeGenerator.Generate(
+                _settings.SuffixedNamespaceName,
+                className,
+                _settings.CopyrightNotice,
+                schema.Description);
+
+            if (interfaceHint != null)
+            {
+                typeGenerator = new InterfaceGenerator(
+                    propertyInfoDictionary,
+                    schema,
+                    _settings.TypeNameSuffix,
+                    _settings.HintDictionary);
+                string description = interfaceHint.Description ?? schema.Description;
+
+                _pathToFileContentsDictionary[baseInterfaceName + _settings.TypeNameSuffix] = typeGenerator.Generate(
+                    _settings.SuffixedNamespaceName,
+                    baseInterfaceName,
+                    _settings.CopyrightNotice,
+                    description);
+            }
+
+            return _pathToFileContentsDictionary[suffixedClassName];
+        }
+        /// <summary>
+        /// Dynamically generate the code hint for resource definitions
+        /// </summary>
+        /// <param name="resDefinitionName"></param>
+        private void AddCodeHintForResourceDefinition(string resDefinitionName)
+        {
+            var hintDictionary = _settings.HintDictionary;
+            var baseTypeHint = hintDictionary.GetHint<BaseTypeHint>("ResourceDefinitions");
+            if (baseTypeHint != null)
+            {
+                hintDictionary.Add(resDefinitionName, new List<CodeGenHint> { baseTypeHint }.ToArray());
+                baseTypeHint.BaseTypePropsToOverride?.ToList().ForEach(prop =>
+                {
+                    var modifierHint = new PropertyModifiersHint(new List<string>
+                    {
+                        "public", "override"
+                    }, true);
+                    hintDictionary.Add(resDefinitionName.ToPascalCase() + "." + prop.ToPascalCase(), 
+                        new List<CodeGenHint> { modifierHint }.ToArray());
+                });
+            }
         }
 
         private void OnAdditionalTypeRequired(AdditionalTypeRequiredInfo e)

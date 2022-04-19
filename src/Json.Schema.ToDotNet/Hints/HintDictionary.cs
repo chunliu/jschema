@@ -150,8 +150,14 @@ namespace Microsoft.Json.Schema.ToDotNet.Hints
             string[] baseTypeNames = GetArrayArgument<string>(arguments, nameof(BaseTypeHint.BaseTypeNames))
                 .Select(btn => btn + _typeNameSuffix)
                 .ToArray();
+            string[] baseTypePropsToIgnore = GetArrayArgument<string>(arguments, nameof(BaseTypeHint.BaseTypePropsToIgnore))
+                .Select(btn => btn + _typeNameSuffix)
+                .ToArray();
+            string[] baseTypePropsToOverride = GetArrayArgument<string>(arguments, nameof(BaseTypeHint.BaseTypePropsToOverride))
+                .Select(btn => btn + _typeNameSuffix)
+                .ToArray();
 
-            return new BaseTypeHint(baseTypeNames);
+            return new BaseTypeHint(baseTypeNames, baseTypePropsToIgnore, baseTypePropsToOverride);
         }
 
         private static CodeGenHint CreateClassNameHint(JObject arguments)
