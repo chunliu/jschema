@@ -483,13 +483,15 @@ namespace Microsoft.Json.Schema.ToDotNet
             var baseTypeHint = hintDictionary.GetHint<BaseTypeHint>("ResourceDefinitions");
             if (baseTypeHint != null)
             {
-                hintDictionary.Add(resDefinitionName, new List<CodeGenHint> { baseTypeHint }.ToArray());
+                // Dynamically add BaseTypeHint
+                hintDictionary.Add(resDefinitionName.ToCamelCase(), new List<CodeGenHint> { baseTypeHint }.ToArray());
+                // Dynamically add PropertyModifierHint
                 baseTypeHint.BaseTypePropsToOverride?.ToList().ForEach(prop =>
                 {
                     var modifierHint = new PropertyModifiersHint(new List<string>
                     {
                         "public", "override"
-                    }, true);
+                    }, true, true);
                     hintDictionary.Add(resDefinitionName.ToPascalCase() + "." + prop.ToPascalCase(), 
                         new List<CodeGenHint> { modifierHint }.ToArray());
                 });

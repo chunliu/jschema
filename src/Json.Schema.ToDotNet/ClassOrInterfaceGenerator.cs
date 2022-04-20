@@ -40,6 +40,22 @@ namespace Microsoft.Json.Schema.ToDotNet
 
         protected abstract AccessorDeclarationSyntax[] GeneratePropertyAccessors(string propertyName);
 
+        protected virtual ArrowExpressionClauseSyntax GeneratePropertyExpressionBody(object defaultValue)
+        {
+            if (defaultValue == null)
+            {
+                return SyntaxFactory.ArrowExpressionClause(
+                    SyntaxFactory.ThrowExpression(
+                        SyntaxFactory.ObjectCreationExpression(
+                            SyntaxFactory.IdentifierName("NotImplementedException")
+                            ).AddArgumentListArguments()));
+            }
+
+            return SyntaxFactory.ArrowExpressionClause(
+                SyntaxFactory.LiteralExpression(
+                    SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(defaultValue.ToString())));
+        }
+
         /// <summary>
         /// Gets a dictionary that maps the name of each property in the generated class
         /// to a information about the property derived from the JSON schema.
@@ -105,12 +121,26 @@ namespace Microsoft.Json.Schema.ToDotNet
         private PropertyDeclarationSyntax CreatePropertyDeclaration(string propertyName)
         {
             PropertyInfo info = PropInfoDictionary[propertyName];
+            PropertyDeclarationSyntax propDecl;
 
-            PropertyDeclarationSyntax propDecl = SyntaxFactory.PropertyDeclaration(
+            var accessorList = GeneratePropertyAccessors(propertyName);
+            if (accessorList != null)
+            {
+                propDecl = SyntaxFactory.PropertyDeclaration(
                 info.Type,
                 propertyName.ToPascalCase())
                 .AddModifiers(GenerateSchemaPropertyModifiers(propertyName))
-                .AddAccessorListAccessors(GeneratePropertyAccessors(propertyName));
+                .AddAccessorListAccessors(accessorList);
+            }
+            else
+            {
+                propDecl = SyntaxFactory.PropertyDeclaration(
+                    new SyntaxList<AttributeListSyntax>(), new SyntaxTokenList(),
+                    info.Type, null, SyntaxFactory.Identifier(propertyName.ToPascalCase()),
+                    null, GeneratePropertyExpressionBody(info.DefaultValue),
+                    null, SyntaxFactory.Token(SyntaxKind.SemicolonToken))
+                    .AddModifiers(GenerateSchemaPropertyModifiers(propertyName));
+            }
 
             AttributeSyntax[] attributes = GeneratePropertyAttributes(propertyName, info.SerializedName, info.IsRequired, info.DefaultValue, info.Type);
             if (attributes.Length > 0)

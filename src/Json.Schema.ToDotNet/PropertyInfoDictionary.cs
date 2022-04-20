@@ -230,6 +230,45 @@ namespace Microsoft.Json.Schema.ToDotNet
             return ImmutableDictionary.CreateRange(entries);
         }
 
+        private static JsonSchema ProcessPropertyOneOf(JsonSchema schema)
+        {
+            JsonSchema ofSchema = null;
+            foreach(var of in schema.OneOf)
+            {
+                if (of.Type?.Count > 0)
+                {
+                    if (of.Type[0] == SchemaType.Array)
+                    {
+                        ofSchema = of;
+                        break;
+                    }
+                    else if (ofSchema == null || ofSchema.Type?.Count == 0 || ofSchema.Type[0] < of.Type[0])
+                    {
+                        ofSchema = of;
+                        if (ofSchema.Reference?.IsUri ?? false)
+                        {
+                            ofSchema.Reference = null;
+                        }
+                    }
+                }
+                else if (of.Reference != null)
+                {
+                    if (ofSchema == null || (!(ofSchema.Reference?.IsFragment ?? false) && of.Reference.IsFragment))
+                    {
+                        ofSchema = of;
+                    }
+                }
+            }
+
+            if (ofSchema != null)
+            {
+                ofSchema.Description = schema.Description;
+                schema = ofSchema;
+            }
+
+            return schema;
+        }
+
         private void AddPropertyInfoFromPropertySchema(
             IList<KeyValuePair<string, PropertyInfo>> entries,
             string schemaPropertyName,
@@ -250,6 +289,11 @@ namespace Microsoft.Json.Schema.ToDotNet
             if (baseTypeHint != null && (baseTypeHint.BaseTypePropsToIgnore?.Contains(schemaPropertyName) ?? false))
             {
                 return;
+            }
+
+            if (propertySchema.OneOf?.Count > 0)
+            {
+                propertySchema = ProcessPropertyOneOf(propertySchema);
             }
 
             if (propertySchema.IsDateTime())
@@ -328,6 +372,10 @@ namespace Microsoft.Json.Schema.ToDotNet
                         break;
 
                     case SchemaType.String:
+                        if (propertySchema.Enum?.Count == 1)
+                        {
+                            propertySchema.Default = propertySchema.Enum[0].ToString();
+                        }
                         comparisonKind = ComparisonKind.OperatorEquals;
                         hashKind = HashKind.ScalarReferenceType;
                         initializationKind = InitializationKind.SimpleAssign;
@@ -462,25 +510,6 @@ namespace Microsoft.Json.Schema.ToDotNet
             JsonSchema schema)
         {
             string key = MakeElementKeyName(propertyName);
-            if (schema.Items == null)
-            {
-                // The reference schema could be an array
-                if (schema.OneOf?.Count > 0)
-                {
-                    foreach(var oneOf in schema.OneOf.Where(o => o.Type?.Count > 0))
-                    {
-                        if (oneOf.Type[0] == SchemaType.Array && oneOf.Items != null)
-                        {
-                            if (oneOf.Items.Schema.Type == null && oneOf.Items.Schema.Reference != null)
-                            {
-                                oneOf.Items.Schema.Type = new List<SchemaType> { SchemaType.Object };
-                            }
-                            schema = oneOf;
-                            break;
-                        }
-                    }
-                }
-            }
             
             if (schema.Items == null)
             {
@@ -495,6 +524,10 @@ namespace Microsoft.Json.Schema.ToDotNet
                             SchemaType.Object
                         }
                     });
+            }
+            else if (schema.Items.Schema?.Type == null && schema.Items.Schema?.Reference != null)
+            {
+                schema.Items.Schema.Type = new List<SchemaType> { SchemaType.Object };
             }
 
             if (!schema.Items.SingleSchema)

@@ -449,6 +449,11 @@ namespace Microsoft.Json.Schema.ToDotNet
         protected override AccessorDeclarationSyntax[] GeneratePropertyAccessors(string propertyName)
         {
             PropertyModifiersHint propertyModifiersHint = HintDictionary?.GetPropertyHint<PropertyModifiersHint>(TypeName, propertyName);
+            if (propertyModifiersHint?.NoAccessor ?? false)
+            {
+                return null;
+            }
+
             if (propertyModifiersHint?.OnlyGet ?? false)
             {
                 return new AccessorDeclarationSyntax[]

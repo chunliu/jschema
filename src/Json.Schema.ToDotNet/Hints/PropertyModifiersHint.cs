@@ -23,10 +23,11 @@ namespace Microsoft.Json.Schema.ToDotNet.Hints
         /// <param name="modifiers">
         /// The property modifiers.
         /// </param>
-        public PropertyModifiersHint(IEnumerable<string> modifiers, bool onlyGet)
+        public PropertyModifiersHint(IEnumerable<string> modifiers, bool onlyGet, bool noAccessor)
         {
             Modifiers = modifiers.Select(TokenFromModifierName).ToList();
             OnlyGet = onlyGet;
+            NoAccessor = noAccessor;
         }
 
         private SyntaxToken TokenFromModifierName(string modifierName)
@@ -53,5 +54,6 @@ namespace Microsoft.Json.Schema.ToDotNet.Hints
         /// </summary>
         public IList<SyntaxToken> Modifiers { get; }
         public bool OnlyGet { get; }
+        public bool NoAccessor { get; }
     }
 }
