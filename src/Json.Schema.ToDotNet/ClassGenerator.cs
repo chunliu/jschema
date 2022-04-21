@@ -30,20 +30,13 @@ namespace Microsoft.Json.Schema.ToDotNet
         // Name used for the parameters of the copy ctor.
         private const string OtherParameterName = "other";
 
-        private const string DefaultValueAttributeNamespaceName = "System.ComponentModel";
-        private const string DefaultValueAttributeName = "DefaultValue";
+        //private const string DefaultValueAttributeNamespaceName = "System.ComponentModel";
+        //private const string DefaultValueAttributeName = "DefaultValue";
+        private const string RequiredAttributeNamespaceName = "System.ComponentModel.DataAnnotations";
+        private const string RequiredAttributeName = "Required";
 
-        private const string JsonPropertyAttributeNamespaceName = "Newtonsoft.Json";
-        private const string JsonPropertyAttributeName = "JsonProperty";
-        private const string DefaultValueHandlingPropertyName = "DefaultValueHandling";
-        private const string DefaultValueHandlingEnumerationName = "DefaultValueHandling";
-        private const string DefaultValueHandlingValueName = "IgnoreAndPopulate";
-
-        private const string DataContractAttributeName = "DataContract";
-        private const string DataMemberAttributeName = "DataMember";
-        private const string DataMemberNamePropertyName = "Name";
-        private const string DataMemberIsRequiredPropertyName = "IsRequired";
-        private const string DataMemberEmitDefaultValuePropertyName = "EmitDefaultValue";
+        private const string JsonPropertyAttributeNamespaceName = "System.Text.Json.Serialization";
+        private const string JsonPropertyAttributeName = "JsonPropertyName";
 
         private const string AddMethodName = "Add";
         private const string InitMethodName = "Init";
@@ -95,13 +88,6 @@ namespace Microsoft.Json.Schema.ToDotNet
                 : SyntaxKind.PartialKeyword;
 
             var classDeclaration = SyntaxFactory.ClassDeclaration(SuffixedTypeName)
-                .AddAttributeLists(new AttributeListSyntax[]
-                    {
-                        SyntaxFactory.AttributeList(
-                            SyntaxFactory.SingletonSeparatedList(
-                                SyntaxFactory.Attribute(
-                                    SyntaxFactory.IdentifierName(DataContractAttributeName))))
-                    })
                 .AddModifiers(
                     SyntaxFactory.Token(SyntaxKind.PublicKeyword),
                     SyntaxFactory.Token(sealedOrPartial));
@@ -146,7 +132,7 @@ namespace Microsoft.Json.Schema.ToDotNet
             }
 
             AddUsing("System");
-            AddUsing("System.Runtime.Serialization");   // For DataContractAttribute;
+            AddUsing(JsonPropertyAttributeNamespaceName);
             _usingNamespaces?.ToList().ForEach(n => AddUsing(n));
 
             if (baseTypes.Count > 0)
@@ -290,86 +276,57 @@ namespace Microsoft.Json.Schema.ToDotNet
         {
             var attributes = new List<AttributeSyntax>();
 
-            var dataMemberAttributeArguments =
-                new List<AttributeArgumentSyntax>
-                {
-                    SyntaxFactory.AttributeArgument(
-                        SyntaxFactory.NameEquals(DataMemberNamePropertyName),
-                        default(NameColonSyntax),
-                        SyntaxFactory.LiteralExpression(
-                            SyntaxKind.StringLiteralExpression,
-                            SyntaxFactory.Literal(serializedName))),
-                    SyntaxFactory.AttributeArgument(
-                        SyntaxFactory.NameEquals(DataMemberIsRequiredPropertyName),
-                        default(NameColonSyntax),
-                        SyntaxFactory.LiteralExpression(isRequired
-                            ? SyntaxKind.TrueLiteralExpression
-                            : SyntaxKind.FalseLiteralExpression))
-                };
-
-            if (!isRequired)
+            if (isRequired)
             {
-                dataMemberAttributeArguments.Add(
-                    SyntaxFactory.AttributeArgument(
-                        SyntaxFactory.NameEquals(DataMemberEmitDefaultValuePropertyName),
-                        default(NameColonSyntax),
-                        SyntaxFactory.LiteralExpression(SyntaxKind.FalseLiteralExpression)));
-            }
+                AddUsing(RequiredAttributeNamespaceName);
 
-            AttributeSyntax dataMemberAttribute =
-                SyntaxFactory.Attribute(
-                    SyntaxFactory.IdentifierName(DataMemberAttributeName),
-                    SyntaxFactory.AttributeArgumentList(
-                        SyntaxFactory.SeparatedList(dataMemberAttributeArguments)));
-
-            attributes.Add(dataMemberAttribute);
-
-            if (defaultValue != null)
-            {
-                // We want to add a DefaultValue attribute, but we can only do that if the
-                // default value specified in the schema can be represented by a literal
-                // (a compile-time constant like 42 or "Don't panic" or Color.Red). We can't do it if
-                // the default value must be calculated at runtime, for example, an empty array.
-                ExpressionSyntax expression = GetExpressionForValue(defaultValue, propertyType);
-                if (expression != null)
-                {
-                    AddUsing(DefaultValueAttributeNamespaceName);
-
-                    var defaultValueArguments = new List<AttributeArgumentSyntax>
-                    {
-                        SyntaxFactory.AttributeArgument(expression)
-                    };
-
-                    AttributeSyntax defaultValueAttribute =
-                        SyntaxFactory.Attribute(
-                            SyntaxFactory.IdentifierName(DefaultValueAttributeName),
-                            SyntaxFactory.AttributeArgumentList(
-                                SyntaxFactory.SeparatedList(defaultValueArguments)));
-
-                    attributes.Add(defaultValueAttribute);
-                }
-
-                AddUsing(JsonPropertyAttributeNamespaceName);
-
-                var jsonPropertyArguments = new List<AttributeArgumentSyntax>
-                {
-                    SyntaxFactory.AttributeArgument(
-                        SyntaxFactory.NameEquals(DefaultValueHandlingPropertyName),
-                        default(NameColonSyntax),
-                        SyntaxFactory.MemberAccessExpression(
-                            SyntaxKind.SimpleMemberAccessExpression,
-                            SyntaxFactory.IdentifierName(DefaultValueHandlingEnumerationName),
-                            SyntaxFactory.IdentifierName(DefaultValueHandlingValueName)))
-                };
-
-                AttributeSyntax jsonPropertyAttribute =
+                AttributeSyntax requiredAttribute =
                     SyntaxFactory.Attribute(
-                        SyntaxFactory.IdentifierName(JsonPropertyAttributeName),
-                        SyntaxFactory.AttributeArgumentList(
-                            SyntaxFactory.SeparatedList(jsonPropertyArguments)));
+                        SyntaxFactory.IdentifierName(RequiredAttributeName));
 
-                attributes.Add(jsonPropertyAttribute);
+                attributes.Add(requiredAttribute);
             }
+
+            // Json property name
+            AttributeSyntax jsonPropertyAttribute =
+                SyntaxFactory.Attribute(
+                    SyntaxFactory.IdentifierName(JsonPropertyAttributeName),
+                    SyntaxFactory.AttributeArgumentList(
+                        SyntaxFactory.SingletonSeparatedList(
+                            SyntaxFactory.AttributeArgument(
+                                SyntaxFactory.LiteralExpression(
+                                    SyntaxKind.StringLiteralExpression,
+                                    SyntaxFactory.Literal(serializedName))))));
+
+            attributes.Add(jsonPropertyAttribute);
+
+            // Temporarily disable the attribute for the default value. 
+            // Will add it back if necessary in the future. 
+            //if (defaultValue != null)
+            //{
+            //    // We want to add a DefaultValue attribute, but we can only do that if the
+            //    // default value specified in the schema can be represented by a literal
+            //    // (a compile-time constant like 42 or "Don't panic" or Color.Red). We can't do it if
+            //    // the default value must be calculated at runtime, for example, an empty array.
+            //    ExpressionSyntax expression = GetExpressionForValue(defaultValue, propertyType);
+            //    if (expression != null)
+            //    {
+            //        AddUsing(DefaultValueAttributeNamespaceName);
+
+            //        var defaultValueArguments = new List<AttributeArgumentSyntax>
+            //        {
+            //            SyntaxFactory.AttributeArgument(expression)
+            //        };
+
+            //        AttributeSyntax defaultValueAttribute =
+            //            SyntaxFactory.Attribute(
+            //                SyntaxFactory.IdentifierName(DefaultValueAttributeName),
+            //                SyntaxFactory.AttributeArgumentList(
+            //                    SyntaxFactory.SeparatedList(defaultValueArguments)));
+
+            //        attributes.Add(defaultValueAttribute);
+            //    }
+            //}
 
             string hintDictionaryKey = MakeHintDictionaryKey(propertyName);
             AttributeHint[] attributeHints = HintDictionary?.GetHints<AttributeHint>(hintDictionaryKey);
