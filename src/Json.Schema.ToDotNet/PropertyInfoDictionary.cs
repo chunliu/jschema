@@ -256,6 +256,7 @@ namespace Microsoft.Json.Schema.ToDotNet
                     if (ofSchema == null || (!(ofSchema.Reference?.IsFragment ?? false) && of.Reference.IsFragment))
                     {
                         ofSchema = of;
+                        ofSchema.Type = new List<SchemaType> { SchemaType.Object };
                     }
                 }
             }
@@ -355,7 +356,6 @@ namespace Microsoft.Json.Schema.ToDotNet
                 {
                     // Handle resourceLocations which is actually a string
                     ReferenceTypeHint rHint = _hintDictionary.GetHint<ReferenceTypeHint>(schemaPropertyName);
-                    // var typeName = rHint?.TypeName?[..1].ToUpperInvariant() + rHint?.TypeName?[1..] ?? string.Empty;
                     var typeName = rHint?.TypeName?.ToPascalCase() ?? string.Empty;
                     _ = Enum.TryParse(typeName, out propertyType);
                 }
