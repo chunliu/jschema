@@ -355,7 +355,7 @@ namespace Microsoft.Json.Schema.ToDotNet
                 if (propertyType == SchemaType.None && propertySchema.Type == null && propertySchema.Reference != null)
                 {
                     // Handle resourceLocations which is actually a string
-                    ReferenceTypeHint rHint = _hintDictionary.GetHint<ReferenceTypeHint>(schemaPropertyName);
+                    ReferenceTypeHint rHint = _hintDictionary.GetPropertyHint<ReferenceTypeHint>(_typeName, schemaPropertyName);
                     var typeName = rHint?.TypeName?.ToPascalCase() ?? string.Empty;
                     _ = Enum.TryParse(typeName, out propertyType);
                 }
@@ -511,28 +511,51 @@ namespace Microsoft.Json.Schema.ToDotNet
         {
             string key = MakeElementKeyName(propertyName);
             
-            if (schema.Items == null)
+            var hint = _hintDictionary?.GetPropertyHint<ArrayTypeHint>(_typeName, propertyName);
+            if (hint != null)
             {
-                // If "items" is missing, it defaults to an empty schema, meaning the array
-                // element type can be anything. By treating it as if it were "items": "object",
-                // we will generate the same code, namely, a .NET array of System.Object.
-                schema.Items = new Items(
-                    new JsonSchema
-                    {
-                        Type = new List<SchemaType>
+                SchemaType type;
+                _ = Enum.TryParse(hint.ItemsTypeName, out type);
+                if (type != SchemaType.None)
+                {
+                    schema.Items = new Items(
+                        new JsonSchema
                         {
-                            SchemaType.Object
-                        }
-                    });
+                            Type = new List<SchemaType> { type }
+                        });
+                }
+                else
+                {
+                    schema.Items = new Items(
+                        new JsonSchema
+                        {
+                            Type = new List<SchemaType> { SchemaType.Object },
+                            Reference = new UriOrFragment($"#/definitions/{hint.ItemsTypeName}")
+                        });
+                }
             }
-            else if (schema.Items.Schema?.Type == null && schema.Items.Schema?.Reference != null)
+            else
             {
-                schema.Items.Schema.Type = new List<SchemaType> { SchemaType.Object };
-            }
+                if (schema.Items == null)
+                {
+                    // If "items" is missing, it defaults to an empty schema, meaning the array
+                    // element type can be anything. By treating it as if it were "items": "object",
+                    // we will generate the same code, namely, a .NET array of System.Object.
+                    schema.Items = new Items(
+                        new JsonSchema
+                        {
+                            Type = new List<SchemaType> { SchemaType.Object }
+                        });
+                }
+                else if (schema.Items.Schema?.Type == null && schema.Items.Schema?.Reference != null)
+                {
+                    schema.Items.Schema.Type = new List<SchemaType> { SchemaType.Object };
+                }
 
-            if (!schema.Items.SingleSchema)
-            {
-                throw new ApplicationException($"Cannot generate code for the array property '{propertyName}' because the 'items' property of the schema contains different schemas for each array element.");
+                if (!schema.Items.SingleSchema)
+                {
+                    throw new ApplicationException($"Cannot generate code for the array property '{propertyName}' because the 'items' property of the schema contains different schemas for each array element.");
+                }
             }
 
             AddPropertyInfoFromPropertySchema(entries, key, schema.Items.Schema, isRequired: true);
