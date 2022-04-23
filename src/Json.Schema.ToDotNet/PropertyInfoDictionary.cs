@@ -514,8 +514,9 @@ namespace Microsoft.Json.Schema.ToDotNet
             var hint = _hintDictionary?.GetPropertyHint<ArrayTypeHint>(_typeName, propertyName);
             if (hint != null)
             {
-                SchemaType type;
-                _ = Enum.TryParse(hint.ItemsTypeName, out type);
+                // If the hint is a simple type, use it for the type of items. 
+                // Otherwise, assume it is a custom type gernated with the schema definition.
+                _ = Enum.TryParse(hint.ItemsTypeName, out SchemaType type);
                 if (type != SchemaType.None)
                 {
                     schema.Items = new Items(

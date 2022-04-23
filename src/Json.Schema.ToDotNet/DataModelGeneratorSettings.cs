@@ -119,10 +119,10 @@ namespace Microsoft.Json.Schema.ToDotNet
                 ReportMissingProperty(nameof(NamespaceName), sb);
             }
 
-            if (string.IsNullOrWhiteSpace(RootClassName))
-            {
-                ReportMissingProperty(nameof(RootClassName), sb);
-            }
+            //if (string.IsNullOrWhiteSpace(RootClassName))
+            //{
+            //    ReportMissingProperty(nameof(RootClassName), sb);
+            //}
 
             if (sb.Length > 0)
             {

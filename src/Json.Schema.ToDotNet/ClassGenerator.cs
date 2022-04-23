@@ -300,34 +300,6 @@ namespace Microsoft.Json.Schema.ToDotNet
 
             attributes.Add(jsonPropertyAttribute);
 
-            // Temporarily disable the attribute for the default value. 
-            // Will add it back if necessary in the future. 
-            //if (defaultValue != null)
-            //{
-            //    // We want to add a DefaultValue attribute, but we can only do that if the
-            //    // default value specified in the schema can be represented by a literal
-            //    // (a compile-time constant like 42 or "Don't panic" or Color.Red). We can't do it if
-            //    // the default value must be calculated at runtime, for example, an empty array.
-            //    ExpressionSyntax expression = GetExpressionForValue(defaultValue, propertyType);
-            //    if (expression != null)
-            //    {
-            //        AddUsing(DefaultValueAttributeNamespaceName);
-
-            //        var defaultValueArguments = new List<AttributeArgumentSyntax>
-            //        {
-            //            SyntaxFactory.AttributeArgument(expression)
-            //        };
-
-            //        AttributeSyntax defaultValueAttribute =
-            //            SyntaxFactory.Attribute(
-            //                SyntaxFactory.IdentifierName(DefaultValueAttributeName),
-            //                SyntaxFactory.AttributeArgumentList(
-            //                    SyntaxFactory.SeparatedList(defaultValueArguments)));
-
-            //        attributes.Add(defaultValueAttribute);
-            //    }
-            //}
-
             string hintDictionaryKey = MakeHintDictionaryKey(propertyName);
             AttributeHint[] attributeHints = HintDictionary?.GetHints<AttributeHint>(hintDictionaryKey);
             if (attributeHints != null)
