@@ -203,13 +203,7 @@ namespace Microsoft.Json.Schema.ToDotNet
 
         private string GetHintedClassName(string className)
         {
-            ClassNameHint classNameHint = _settings.HintDictionary?.GetHint<ClassNameHint>(className);
-            if (classNameHint != null)
-            {
-                className = classNameHint.ClassName;
-            }
-
-            return className;
+            return Utilities.GetHintedClassName(_settings.HintDictionary, className);
         }
 
         private void GenerateEqualityComparer(string className, JsonSchema schema)
@@ -483,8 +477,10 @@ namespace Microsoft.Json.Schema.ToDotNet
             var baseTypeHint = hintDictionary.GetHint<BaseTypeHint>("ResourceDefinitions");
             if (baseTypeHint != null)
             {
+                // Remove "_" from the class name, and make the name to Pascal.
+                var className = FormatClassName(resDefinitionName);
                 // Dynamically add BaseTypeHint
-                hintDictionary.Add(resDefinitionName.ToCamelCase(), new List<CodeGenHint> { baseTypeHint }.ToArray());
+                hintDictionary.Add(className.ToCamelCase(), new List<CodeGenHint> { baseTypeHint }.ToArray());
                 // Dynamically add PropertyModifierHint
                 baseTypeHint.BaseTypePropsToOverride?.ToList().ForEach(prop =>
                 {
@@ -492,10 +488,21 @@ namespace Microsoft.Json.Schema.ToDotNet
                     {
                         "public", "override"
                     }, true, true);
-                    hintDictionary.Add(resDefinitionName.ToPascalCase() + "." + prop.ToPascalCase(), 
+                    hintDictionary.Add(className.ToPascalCase() + "." + prop.ToPascalCase(), 
                         new List<CodeGenHint> { modifierHint }.ToArray());
                 });
             }
+        }
+        private static string FormatClassName(string className)
+        {
+            var subNames = className.Split('_');
+            var formattedName = string.Empty;
+            foreach (var subName in subNames)
+            {
+                formattedName += subName.ToPascalCase();
+            }
+
+            return formattedName;
         }
 
         private void OnAdditionalTypeRequired(AdditionalTypeRequiredInfo e)

@@ -488,11 +488,7 @@ namespace Microsoft.Json.Schema.ToDotNet
         private TypeSyntax MakeObjectTypeFromReference(UriOrFragment reference, out string namespaceName)
         {
             string className = reference.GetDefinitionName();
-            ClassNameHint classNameHint = _hintDictionary?.GetHint<ClassNameHint>(className.ToCamelCase());
-            if (classNameHint != null)
-            {
-                className = classNameHint.ClassName;
-            }
+            className = Utilities.GetHintedClassName(_hintDictionary, className);
 
             return MakeNamedType(className, out namespaceName);
         }
