@@ -17,8 +17,10 @@ namespace Microsoft.Json.Schema.ToDotNet
     internal static class SyntaxNodeExtensions
     {
         private const string GeneratedCodeAttributeName = "GeneratedCode";
-        private static readonly string s_assemblyName = Assembly.GetCallingAssembly().GetName().Name;
-        private static readonly string s_assemblyVersion = Assembly.GetCallingAssembly().GetName().Version.ToString();
+        private static readonly string s_assemblyName = Assembly.GetEntryAssembly().GetName().Name;
+        private static readonly string s_assemblyVersion = Assembly.GetEntryAssembly().GetName().Version.ToString();
+        //private static readonly string s_assemblyName = Assembly.GetCallingAssembly().GetName().Name;
+        //private static readonly string s_assemblyVersion = Assembly.GetCallingAssembly().GetName().Version.ToString();
 
         /// <summary>
         /// Format a type declaration into a string representing the contents of a file
