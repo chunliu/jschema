@@ -22,8 +22,8 @@ namespace Microsoft.Json.Schema.ToDotNet.Hints
             IEnumerable<string> baseTypePropsToIgnore, IEnumerable<string> baseTypePropsToOverride)
         {
             BaseTypeNames = baseTypeNames.ToList();
-            BaseTypePropsToIgnore = baseTypePropsToIgnore.ToList();
-            BaseTypePropsToOverride = baseTypePropsToOverride.ToList();
+            BaseTypePropsToIgnore = baseTypePropsToIgnore?.ToList();
+            BaseTypePropsToOverride = baseTypePropsToOverride?.ToList();
         }
 
         /// <summary>

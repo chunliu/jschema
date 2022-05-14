@@ -214,6 +214,39 @@ namespace Microsoft.Json.Schema.ToDotNet
                     }
                 }
             }
+            // Handle OneOf of a type, such as SitesConfig of Microsoft.Web
+            if (_schema.Type != null && _schema.Type[0] == SchemaType.Object && _schema.OneOf?.Count > 0)
+            {
+                var ofSchema = _schema.OneOf
+                    .FirstOrDefault(of => of.Type != null && of.Type[0] == SchemaType.Object && of.Properties?.Count > 0);
+
+                if (ofSchema != null)
+                {
+                    if (_schema.Properties == null)
+                    {
+                        _schema.Properties = ofSchema.Properties;
+                    }
+                    else
+                    {
+                        foreach (KeyValuePair<string, JsonSchema> p in ofSchema.Properties)
+                        {
+                            _schema.Properties.Add(p.Key, p.Value);
+                        }
+                    }
+
+                    if (_schema.Required == null)
+                    {
+                        _schema.Required = ofSchema.Required;
+                    }
+                    else
+                    {
+                        foreach(var r in ofSchema.Required)
+                        {
+                            _schema.Required.Add(r);
+                        }
+                    }
+                }
+            }
 
             if (_schema.Properties != null)
             {
@@ -292,7 +325,15 @@ namespace Microsoft.Json.Schema.ToDotNet
                 return;
             }
 
-            if (propertySchema.OneOf?.Count > 0)
+            var propTypeHint = _hintDictionary.GetPropertyHint<ReferenceTypeHint>(_typeName, schemaPropertyName);
+            if (propTypeHint != null)
+            {
+                SchemaType sType;
+                var propTypeName = propTypeHint.TypeName?.ToPascalCase() ?? string.Empty;
+                _ = Enum.TryParse(propTypeName, out sType);
+                propertySchema.Type = new List<SchemaType> { sType };
+            }
+            else if (propertySchema.OneOf?.Count > 0)
             {
                 propertySchema = ProcessPropertyOneOf(propertySchema);
             }
