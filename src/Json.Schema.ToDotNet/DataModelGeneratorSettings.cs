@@ -104,6 +104,7 @@ namespace Microsoft.Json.Schema.ToDotNet
 
         public IList<string> ExcludedDefinitionNames { get; set; }
         public IList<string> ExcludedResourceDefinitionNames { get; set; }
+        public IList<string> IncludedChildResources { get; set; }
 
         internal void Validate()
         {
